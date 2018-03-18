@@ -27,7 +27,7 @@ if($key!=null && $chunk_number!=null && $max_chunks!=null){
         $params['key_filename']=$key;
         $params['chunk_id']=$chunk_number;
         $params['total_chunks']=$max_chunks;
-        $params['lifespan']=date("Y-m-d H:i:s");
+        $params['lifespan']=sql_datetime();
         $statement->execute($params);
         file_put_contents('log_upload.txt', "File '".$key.",count=".var_export($result,true).",max_input=".$max_chunks.PHP_EOL, FILE_APPEND);
         echo "Success";

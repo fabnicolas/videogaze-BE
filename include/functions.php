@@ -56,6 +56,10 @@ function unique_random_string($length=16){
 		return bin2hex(openssl_random_pseudo_bytes($length));
 }
 
+function sql_datetime(){
+	return date("Y-m-d H:i:s");
+}
+
 // Enable errors
 enable_errors();
 ?>
