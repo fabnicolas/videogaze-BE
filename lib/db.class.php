@@ -13,10 +13,18 @@ class DB{
         return (substr($str_params,0,strlen($str_params)-1));
     }
 
-    function in_composer($arr_values){
+    function in_composer($array_params){
         $str_params="";
-        foreach($arr_values as $key=>$value){
+        foreach($array_params as $key=>$value){
             $str_params.=$value.",";
+        }
+        return (substr($str_params,0,strlen($str_params)-1));
+    }
+
+    function update_preparedstatement_composer($array_params){
+        $str_params="";
+        foreach($array_params as $key=>$value){
+            $str_params.=$key."=:".$key.",";
         }
         return (substr($str_params,0,strlen($str_params)-1));
     }
