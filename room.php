@@ -155,11 +155,25 @@ if($mode=='init_stream'){
         }else{answer(0,'INVALID_IP');}
     }else{answer(0,'INVALID_ROOMCODE');}
 }elseif($mode=='sync'){
-    
-    
-    
+    $roomcode = post_parameter('roomcode',null);
 
+    if($roomcode!=null){
+        $statement = $db->getPDO()->prepare(
+            "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
+            FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
+        $statement->execute(['roomcode' => $roomcode]);
+        $result = $statement->fetch();
 
+        // If it exists, then it's valid. Store room data to send them back to the client later.
+        if($result != false){
+            answer(1,array(
+                'stream_type'=>$result['stream_type'],
+                'stream_key'=>$result['stream_key'],
+                'stream_current_time'=>$result['stream_current_time'],
+                'stream_isplaying'=>$result['stream_isplaying']
+            ));
+        }else{answer(0,'INVALID_ROOMCODE');}
+    }
 }else{answer(0,'INVALID_MODE');}
 
 ?>
