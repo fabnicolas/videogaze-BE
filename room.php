@@ -82,8 +82,11 @@ if($mode=='init_stream'){
             if($request_type=='set_stream'){
                 $request_value=post_parameter('request_value',null);
                 if($request_value!=null && strripos($request_value,';key=')!=false) $is_valid_request=true;
+            }elseif($request_type=='set_isplaying'){
+                $request_value=(int)post_parameter('request_value',1);
+                if(is_numeric($request_value) && ($request_value==0 || $request_value==1)) $is_valid_request=true;
             }elseif($request_type=='set_current_time'){
-                $request_value=post_parameter('request_value',-1);
+                $request_value=(int)post_parameter('request_value',-1);
                 if(is_numeric($request_value) && $request_value>=0) $is_valid_request=true;
             }elseif($request_type=='chat'){
                 $request_value=post_parameter('request_value',null);
@@ -94,7 +97,9 @@ if($mode=='init_stream'){
                 $statement = $db->getPDO()->prepare(
                     "INSERT INTO requests_in_rooms 
                     (id, roomcode, nickname, time_creation, request_type, request_value) 
-                    VALUES (DEFAULT, :roomcode, :nickname, :time_creation, :request_type, :request_value);"
+                    VALUES (DEFAULT, :roomcode, :nickname, :time_creation, :request_type, :request_value) 
+                    ON DUPLICATE KEY UPDATE time_creation=:time_creation,
+                                            request_value=:request_value;"
                 );
                 $statement->execute([
                     'roomcode'=>$roomcode,
@@ -106,7 +111,7 @@ if($mode=='init_stream'){
 
                 /**
                 *   Sync room data for faster access.
-                *   Retrieve last requests. We use INNER JOIN with MAX(id) subquery to retrieve type and value
+                *   Retrieve last requests. We use INNER JOIN with MAX(time_creation) subquery to retrieve type and value
                 *   by simulating "DISTINCT request_type", because we cannot distinguish a single column
                 *   and retrieve all informations in one query.
                 */
@@ -116,12 +121,12 @@ if($mode=='init_stream'){
                         requests_in_rooms AS x
                         INNER JOIN
                         (
-                            (SELECT MAX(id) AS max_id
+                            (SELECT MAX(time_creation) AS tc
                             FROM requests_in_rooms
-                            WHERE request_type IN ('set_current_time', 'set_stream')
+                            WHERE request_type IN ('set_stream', 'set_isplaying', 'set_current_time')
                             GROUP BY request_type) AS y
                         )
-                    ON x.id=y.max_id");
+                    ON x.time_creation=y.tc");
                 $statement->execute(['roomcode' => $roomcode]);
                 $result = $statement->fetchAll(PDO::FETCH_ASSOC);
 
@@ -139,6 +144,9 @@ if($mode=='init_stream'){
                 }
                 if(isset($last_requests['set_current_time'])){
                     $statement_params['stream_current_time']=$last_requests['set_current_time'];
+                }
+                if(isset($last_requests['set_isplaying'])){
+                    $statement_params['stream_isplaying']=$last_requests['set_isplaying'];
                 }
 
                 if(!empty($statement_params)){
