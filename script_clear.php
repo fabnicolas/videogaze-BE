@@ -1,5 +1,5 @@
 <?php
-$config = require("./include/config.php");
+$config = require("./config.php");
 include("./include/functions.php");
 
 $db = include_once(__DIR__."/include/use_db.php");

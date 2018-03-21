@@ -1,5 +1,5 @@
 <?php
-$config = require(__DIR__."/../include/config.php");
+$config = require(__DIR__."/../config.php");
 require_once(__DIR__."/../include/functions.php");
 require_once(__DIR__."/../lib/db.class.php");
 $connection_params = array(
