@@ -70,21 +70,34 @@ class SSE_Manager{
         else                   $this->max_time=null;
     }
 
+    private function send_event($event){
+        echo new SSE_Event($event);
+        ob_flush();
+        flush();
+    }
+
     public function start_advanced(SSE_Update $update, $event_type = null){
         while(true){
-            if(($new_data=$update->getUpdates())['status'] == 1){
+            $event=null;
+            if(($data=$update->getUpdates())['status'] == 1){
                 $event = [
                     'id'    => uniqid(),
                     'type'  => $event_type,
-                    'data'  => json_encode($new_data['message']),
+                    'data'  => json_encode($data),
                     'retry' => $update->getDelay()
                 ];
-            }else{$event = ['comment' => $new_data['message']];}
-            echo new SSE_Event($event);
-            ob_flush();
-            flush();
+            }else{$event = ['comment' => json_encode($data)];}
+            $this->send_event($event);
             usleep($update->getDelay()*1000);
-            if($this->max_time!=null && ((time() - ($this->start_time)) >= ($this->max_time))) break;
+            if($this->max_time!=null && ((time() - ($this->start_time)) >= ($this->max_time))){
+                $this->send_event([
+                    'id'=>uniqid(),
+                    'type'=>$event_type,
+                    'data'=>json_encode(array('status'=>0, 'message'=>'SSE_CLOSE_CONNECTION')),
+                    'retry'=>2000
+                ]);
+                break;
+            }
         }
     }
 
