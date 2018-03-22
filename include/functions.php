@@ -5,6 +5,10 @@ function enable_errors(){
 	error_reporting(E_ALL);
 }
 
+function get_parameter($key,$default=null){
+	return isset($_GET[$key]) ? $_GET[$key] : $default;
+}
+
 function post_parameter($key,$default=null){
 	return isset($_POST[$key]) ? $_POST[$key] : $default;
 }

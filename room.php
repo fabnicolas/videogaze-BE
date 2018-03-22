@@ -13,6 +13,9 @@ function answer($status,$message){
 }
 
 $mode = post_parameter('mode',null);
+if($mode==null && $config['http_sync_mode']=='server_sent_events')
+    $mode = get_parameter('mode',null); // For SSE
+
 if($mode=='init_stream'){
     // If a roomcode is provided by client, use it, otherwise use null value.
     $roomcode = post_parameter('roomcode',null);
@@ -46,6 +49,10 @@ if($mode=='init_stream'){
     	// Room is not valid. Make a new room and generate a new roomcode.
         $roomcode = strtoupper(unique_random_string(11));
 
+        // Eventually client has sent the stream type and stream key values. Let's use them.
+        $stream_type = post_parameter('stream_type','local');
+        $stream_key = post_parameter('stream_key','sample.mp4');
+
         $statement = $db->getPDO()->prepare(
             "INSERT INTO rooms 
             (id, roomcode, time_creation, stream_type, stream_key,
@@ -58,15 +65,15 @@ if($mode=='init_stream'){
         $statement->execute([
             'roomcode'=>$roomcode,
             'time_creation'=>sql_datetime(),
-            'stream_type'=>'local',
-            'stream_key'=>'sample.mp4',
+            'stream_type'=>$stream_type,
+            'stream_key'=>$stream_key,
             'stream_current_time'=>0,
             'stream_isplaying'=>0
         ]);
         answer(1,array(
             'roomcode'=>$roomcode,
-            'stream_type'=>'local',
-            'stream_key'=>'sample.mp4',
+            'stream_type'=>$stream_type,
+            'stream_key'=>$stream_key,
             'stream_current_time'=>0,
             'stream_isplaying'=>0
         ));
@@ -164,23 +171,72 @@ if($mode=='init_stream'){
     }else{answer(0,'INVALID_ROOMCODE');}
 }elseif($mode=='sync'){
     $roomcode = post_parameter('roomcode',null);
+    if($roomcode==null && $config['http_sync_mode']=='server_sent_events')
+        $roomcode = get_parameter('roomcode',null);
 
     if($roomcode!=null){
-        $statement = $db->getPDO()->prepare(
-            "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
-            FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
-        $statement->execute(['roomcode' => $roomcode]);
-        $result = $statement->fetch();
+        // Use SHORT POLLING
+        if($config['http_sync_mode']=='short_polling'){
+            $statement = $db->getPDO()->prepare(
+                "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
+                FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
+            $statement->execute(['roomcode' => $roomcode]);
+            $result = $statement->fetch();
 
-        // If it exists, then it's valid. Store room data to send them back to the client later.
-        if($result != false){
-            answer(1,array(
-                'stream_type'=>$result['stream_type'],
-                'stream_key'=>$result['stream_key'],
-                'stream_current_time'=>$result['stream_current_time'],
-                'stream_isplaying'=>$result['stream_isplaying']
-            ));
-        }else{answer(0,'INVALID_ROOMCODE');}
+            // If it exists, then it's valid. Store room data to send them back to the client later.
+            if($result != false){
+                answer(1,array(
+                    'stream_type'=>$result['stream_type'],
+                    'stream_key'=>$result['stream_key'],
+                    'stream_current_time'=>$result['stream_current_time'],
+                    'stream_isplaying'=>$result['stream_isplaying']
+                ));
+            }else{answer(0,'INVALID_ROOMCODE');}
+        // Use SSE
+        }else if($config['http_sync_mode']=='server_sent_events'){
+            require_once(__DIR__.'/lib/sse.class.php');
+
+            $last_sent_message=null;
+            (new SSE_Manager())->start(function() use($db,$roomcode,&$last_sent_message){
+                $statement = $db->getPDO()->prepare(
+                    "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
+                    FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
+                $statement->execute(['roomcode' => $roomcode]);
+                $result = $statement->fetch();
+
+                if($result !== false){
+                    $status=false;
+                    if($last_sent_message!=null){
+                        if($last_sent_message['stream_type']!=$result['stream_type'] ||
+                            $last_sent_message['stream_key']!=$result['stream_key'] ||
+                            $last_sent_message['stream_current_time']!=$result['stream_current_time'] ||
+                            $last_sent_message['stream_isplaying']!=$result['stream_isplaying'])
+                        {
+                            $status=true;
+                        }else{
+                            $status=false;
+                        }
+                    }else{
+                        $status=true;
+                    }
+
+                    $new_message=null;
+                    if($status==true){
+                        $new_message=array(
+                            'stream_type'=>$result['stream_type'],
+                            'stream_key'=>$result['stream_key'],
+                            'stream_current_time'=>$result['stream_current_time'],
+                            'stream_isplaying'=>$result['stream_isplaying']
+                        );
+                        $last_sent_message=$new_message;
+                    }
+                }
+                
+
+                if(!empty($new_message))    return array('status'=>1, 'message'=>$new_message);
+                else                        return array('status'=>0, 'message'=>'no_data');
+            },250,'sync-messages');
+        }
     }
 }else{answer(0,'INVALID_MODE');}
 
