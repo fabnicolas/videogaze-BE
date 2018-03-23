@@ -86,14 +86,24 @@ if($mode=='init_stream'){
             $request_type=post_parameter('request_type',null);
             $request_value=null;
             $is_valid_request=false;
+
+            // Data validation
+            $extra=array();
+
             if($request_type=='set_stream'){
                 $request_value=post_parameter('request_value',null);
                 if($request_value!=null && strripos($request_value,';key=')!=false) $is_valid_request=true;
             }elseif($request_type=='set_isplaying'){
                 $request_value=(int)post_parameter('request_value',1);
-                if(is_numeric($request_value) && ($request_value==0 || $request_value==1)) $is_valid_request=true;
-            }elseif($request_type=='set_current_time'){
+                if(is_numeric($request_value) && ($request_value==0 || $request_value==1)){
+                    $extra['videotime']=(float)post_parameter('request_videotime',-1);
+                    if($extra['videotime']>=0) $is_valid_request=true;
+                }
+            }elseif($request_type=='set_time'){
                 $request_value=(int)post_parameter('request_value',-1);
+                if(is_numeric($request_value) && $request_value>=0) $is_valid_request=true;
+            }elseif($request_type=='set_current_time'){
+                $request_value=(float)post_parameter('request_value',-1);
                 if(is_numeric($request_value) && $request_value>=0) $is_valid_request=true;
             }elseif($request_type=='chat'){
                 $request_value=post_parameter('request_value',null);
@@ -101,20 +111,27 @@ if($mode=='init_stream'){
             }
 
             if($is_valid_request){
-                $statement = $db->getPDO()->prepare(
-                    "INSERT INTO requests_in_rooms 
-                    (id, roomcode, nickname, time_creation, request_type, request_value) 
-                    VALUES (DEFAULT, :roomcode, :nickname, :time_creation, :request_type, :request_value) 
-                    ON DUPLICATE KEY UPDATE time_creation=:time_creation,
-                                            request_value=:request_value;"
-                );
-                $statement->execute([
-                    'roomcode'=>$roomcode,
-                    'nickname'=>$user_ip,
-                    'time_creation'=>sql_datetime(),
-                    'request_type'=>$request_type,
-                    'request_value'=>$request_value
-                ]);
+                function insert_request($db,$roomcode,$user_ip,$request_type,$request_value){
+                    $statement = $db->getPDO()->prepare(
+                        "INSERT INTO requests_in_rooms 
+                        (id, roomcode, nickname, time_creation, request_type, request_value) 
+                        VALUES (DEFAULT, :roomcode, :nickname, :time_creation, :request_type, :request_value) 
+                        ON DUPLICATE KEY UPDATE time_creation=:time_creation,
+                                                request_value=:request_value;"
+                    );
+                    $statement->execute([
+                        'roomcode'=>$roomcode,
+                        'nickname'=>$user_ip,
+                        'time_creation'=>sql_datetime(),
+                        'request_type'=>$request_type,
+                        'request_value'=>$request_value
+                    ]);
+                }
+                insert_request($db,$roomcode,$user_ip,$request_type,$request_value);
+                if($request_type=='set_isplaying'){
+                    insert_request($db,$roomcode,$user_ip,'set_current_time',$extra['videotime']);
+                }
+
 
                 /**
                 *   Sync room data for faster access.
@@ -151,6 +168,7 @@ if($mode=='init_stream'){
                 }
                 if(isset($last_requests['set_current_time'])){
                     $statement_params['stream_current_time']=$last_requests['set_current_time'];
+                    $statement_params['time_last_current_time']=sql_datetime(6);
                 }
                 if(isset($last_requests['set_isplaying'])){
                     $statement_params['stream_isplaying']=$last_requests['set_isplaying'];
@@ -199,7 +217,7 @@ if($mode=='init_stream'){
             $last_sent_message=null;
             (new SSE_Manager())->start(function() use($db,$roomcode,&$last_sent_message){
                 $statement = $db->getPDO()->prepare(
-                    "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
+                    "SELECT stream_type, stream_key, stream_current_time, stream_isplaying, time_last_current_time
                     FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
                 $statement->execute(['roomcode' => $roomcode]);
                 $result = $statement->fetch();
@@ -207,10 +225,10 @@ if($mode=='init_stream'){
                 if($result !== false){
                     $status=false;
                     if($last_sent_message!=null){
-                        if($last_sent_message['stream_type']!=$result['stream_type'] ||
+                        if(!array_equals($last_sent_message,$db->result_no_int_keys($result))/*['stream_type']!=$result['stream_type'] ||
                             $last_sent_message['stream_key']!=$result['stream_key'] ||
                             $last_sent_message['stream_current_time']!=$result['stream_current_time'] ||
-                            $last_sent_message['stream_isplaying']!=$result['stream_isplaying'])
+                            $last_sent_message['stream_isplaying']!=$result['stream_isplaying']*/)
                         {
                             $status=true;
                         }else{
@@ -226,9 +244,18 @@ if($mode=='init_stream'){
                             'stream_type'=>$result['stream_type'],
                             'stream_key'=>$result['stream_key'],
                             'stream_current_time'=>$result['stream_current_time'],
-                            'stream_isplaying'=>$result['stream_isplaying']
+                            'stream_isplaying'=>$result['stream_isplaying'],
+                            'time_last_current_time'=>$result['time_last_current_time'],
+                            'last_sent_message'=>var_export($last_sent_message,true),
+                            'result'=>var_export($result,true)
                         );
-                        $last_sent_message=$new_message;
+                        $last_sent_message=array(
+                            'stream_type'=>$result['stream_type'],
+                            'stream_key'=>$result['stream_key'],
+                            'stream_current_time'=>$result['stream_current_time'],
+                            'stream_isplaying'=>$result['stream_isplaying'],
+                            'time_last_current_time'=>$result['time_last_current_time']
+                        );
                     }
                 }
                 
