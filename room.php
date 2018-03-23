@@ -25,7 +25,7 @@ if($mode=='init_stream'){
     if($roomcode!=null){
         // Check if room with provided client roomcode exists already.
         $statement = $db->getPDO()->prepare(
-            "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
+            "SELECT stream_type, stream_key, stream_ctime, stream_isplaying
             FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
         $statement->execute(['roomcode' => $roomcode]);
         $result = $statement->fetch();
@@ -35,7 +35,7 @@ if($mode=='init_stream'){
             $room_data=array(
                 'stream_type'=>$result['stream_type'],
                 'stream_key'=>$result['stream_key'],
-                'stream_current_time'=>$result['stream_current_time'],
+                'stream_ctime'=>$result['stream_ctime'],
                 'stream_isplaying'=>$result['stream_isplaying']
             );
             $is_valid_roomcode=true;
@@ -56,10 +56,10 @@ if($mode=='init_stream'){
         $statement = $db->getPDO()->prepare(
             "INSERT INTO rooms 
             (id, roomcode, time_creation, stream_type, stream_key,
-            stream_current_time, stream_isplaying)
+            stream_ctime, stream_isplaying)
             VALUES
             (DEFAULT, :roomcode, :time_creation, :stream_type, :stream_key,
-            :stream_current_time, :stream_isplaying);"
+            :stream_ctime, :stream_isplaying);"
         );
 
         $statement->execute([
@@ -67,15 +67,16 @@ if($mode=='init_stream'){
             'time_creation'=>sql_datetime(),
             'stream_type'=>$stream_type,
             'stream_key'=>$stream_key,
-            'stream_current_time'=>0,
+            'stream_ctime'=>0,
             'stream_isplaying'=>0
         ]);
         answer(1,array(
             'roomcode'=>$roomcode,
             'stream_type'=>$stream_type,
             'stream_key'=>$stream_key,
-            'stream_current_time'=>0,
-            'stream_isplaying'=>0
+            'stream_ctime'=>0,
+            'stream_isplaying'=>0,
+            'last_ctime'=>sql_datetime(6)
         ));
     }
 }elseif($mode=='request'){
@@ -167,11 +168,12 @@ if($mode=='init_stream'){
                     $statement_params['stream_key']=$stream_data[1];
                 }
                 if(isset($last_requests['set_current_time'])){
-                    $statement_params['stream_current_time']=$last_requests['set_current_time'];
-                    $statement_params['time_last_current_time']=sql_datetime(6);
+                    $statement_params['stream_ctime']=$last_requests['set_current_time'];
+                    $statement_params['last_ctime']=sql_datetime(6);
                 }
                 if(isset($last_requests['set_isplaying'])){
                     $statement_params['stream_isplaying']=$last_requests['set_isplaying'];
+                    $statement_params['last_isplaying']=sql_datetime(6);
                 }
 
                 if(!empty($statement_params)){
@@ -196,7 +198,7 @@ if($mode=='init_stream'){
         // Use SHORT POLLING
         if($config['http_sync_mode']=='short_polling'){
             $statement = $db->getPDO()->prepare(
-                "SELECT stream_type, stream_key, stream_current_time, stream_isplaying
+                "SELECT stream_type, stream_key, stream_ctime, stream_isplaying
                 FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
             $statement->execute(['roomcode' => $roomcode]);
             $result = $statement->fetch();
@@ -206,7 +208,7 @@ if($mode=='init_stream'){
                 answer(1,array(
                     'stream_type'=>$result['stream_type'],
                     'stream_key'=>$result['stream_key'],
-                    'stream_current_time'=>$result['stream_current_time'],
+                    'stream_ctime'=>$result['stream_ctime'],
                     'stream_isplaying'=>$result['stream_isplaying']
                 ));
             }else{answer(0,'INVALID_ROOMCODE');}
@@ -217,45 +219,27 @@ if($mode=='init_stream'){
             $last_sent_message=null;
             (new SSE_Manager())->start(function() use($db,$roomcode,&$last_sent_message){
                 $statement = $db->getPDO()->prepare(
-                    "SELECT stream_type, stream_key, stream_current_time, stream_isplaying, time_last_current_time
+                    "SELECT stream_type, stream_key, stream_ctime, stream_isplaying, last_ctime, last_isplaying
                     FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
                 $statement->execute(['roomcode' => $roomcode]);
                 $result = $statement->fetch();
 
                 if($result !== false){
-                    $status=false;
-                    if($last_sent_message!=null){
-                        if(!array_equals($last_sent_message,$db->result_no_int_keys($result))/*['stream_type']!=$result['stream_type'] ||
-                            $last_sent_message['stream_key']!=$result['stream_key'] ||
-                            $last_sent_message['stream_current_time']!=$result['stream_current_time'] ||
-                            $last_sent_message['stream_isplaying']!=$result['stream_isplaying']*/)
-                        {
-                            $status=true;
-                        }else{
-                            $status=false;
-                        }
-                    }else{
-                        $status=true;
-                    }
+                    $status=$last_sent_message!=null ?
+                        (!array_equals($last_sent_message,$db->result_no_int_keys($result)))
+                        : true;
 
                     $new_message=null;
                     if($status==true){
                         $new_message=array(
                             'stream_type'=>$result['stream_type'],
                             'stream_key'=>$result['stream_key'],
-                            'stream_current_time'=>$result['stream_current_time'],
+                            'stream_ctime'=>$result['stream_ctime'],
                             'stream_isplaying'=>$result['stream_isplaying'],
-                            'time_last_current_time'=>$result['time_last_current_time'],
-                            'last_sent_message'=>var_export($last_sent_message,true),
-                            'result'=>var_export($result,true)
+                            'last_ctime'=>$result['last_ctime'],
+                            'last_isplaying'=>$result['last_isplaying']
                         );
-                        $last_sent_message=array(
-                            'stream_type'=>$result['stream_type'],
-                            'stream_key'=>$result['stream_key'],
-                            'stream_current_time'=>$result['stream_current_time'],
-                            'stream_isplaying'=>$result['stream_isplaying'],
-                            'time_last_current_time'=>$result['time_last_current_time']
-                        );
+                        $last_sent_message=$new_message;
                     }
                 }
                 

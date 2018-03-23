@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS alias (
     time_creation datetime NOT NULL,
     stream_type varchar(20) NOT NULL DEFAULT 'uploaded_video',
     stream_key varchar(50) NOT NULL,
-    stream_current_time smallint(6) NOT NULL DEFAULT '0',
+    stream_ctime smallint(6) NOT NULL DEFAULT '0',
     stream_isplaying tinyint(1) NOT NULL DEFAULT '0',
     PRIMARY KEY (id,roomcode)
   ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=30 ;  
