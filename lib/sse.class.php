@@ -44,7 +44,7 @@ class SSE_Event{
 
 class SSE_Update{
     private $callback,$delay;
-    public function __construct(callable $callback, $delay = 3000){
+    public function __construct(callable $callback, $delay=3000){
         $this->callback = $callback;
         $this->delay = $delay;
     }
@@ -76,7 +76,7 @@ class SSE_Manager{
         flush();
     }
 
-    public function start_advanced(SSE_Update $update, $event_type = null){
+    public function start_advanced(SSE_Update $update,$event_type=null,$enable_comments=false){
         while(true){
             $event=null;
             if(($data=$update->getUpdates())['status'] == 1){
@@ -86,8 +86,9 @@ class SSE_Manager{
                     'data'  => json_encode($data),
                     'retry' => $update->getDelay()
                 ];
-            }else{$event = ['comment' => json_encode($data)];}
-            $this->send_event($event);
+            }else if($enable_comments==true){$event = ['comment' => json_encode($data)];}
+            if($event!=null) $this->send_event($event);
+            
             usleep($update->getDelay()*1000);
             if($this->max_time!=null && ((time() - ($this->start_time)) >= ($this->max_time))){
                 $this->send_event([
