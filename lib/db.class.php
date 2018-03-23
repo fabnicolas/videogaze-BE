@@ -21,6 +21,15 @@ class DB{
         return (substr($str_params,0,strlen($str_params)-1));
     }
 
+    function result_no_int_keys(array $result){
+        if($result!==false){
+            foreach($result as $key => $value) {
+                if(is_int($key)) unset($result[$key]);
+            }
+        }
+        return $result;
+    }
+
     function update_preparedstatement_composer($array_params){
         $str_params="";
         foreach($array_params as $key=>$value){
