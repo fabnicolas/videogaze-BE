@@ -142,16 +142,21 @@ if($mode=='init_stream'){
                 */
                 $statement = $db->getPDO()->prepare(
                     "SELECT x.request_type, x.request_value
-                    FROM 
-                        requests_in_rooms AS x
-                        INNER JOIN
-                        (
-                            (SELECT MAX(time_creation) AS tc
-                            FROM requests_in_rooms
-                            WHERE request_type IN ('set_stream', 'set_isplaying', 'set_current_time')
-                            GROUP BY request_type) AS y
+                    FROM requests_in_rooms AS x
+                    INNER JOIN
+                    (
+                      SELECT id FROM requests_in_rooms WHERE time_creation IN 
+                      (
+                          SELECT MAX(time_creation)
+                    
+                          FROM requests_in_rooms AS z
+                    
+                          WHERE request_type IN ('set_stream', 'set_isplaying', 'set_current_time')
+                          AND roomcode = :roomcode 
+                          GROUP BY request_type
                         )
-                    ON x.time_creation=y.tc");
+                    ) AS y
+                    ON x.id=y.id");
                 $statement->execute(['roomcode' => $roomcode]);
                 $result = $statement->fetchAll(PDO::FETCH_ASSOC);
 
