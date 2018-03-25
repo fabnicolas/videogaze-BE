@@ -25,7 +25,8 @@ if($mode=='init_stream'){
     if($roomcode!=null){
         // Check if room with provided client roomcode exists already.
         $statement = $db->getPDO()->prepare(
-            "SELECT stream_type, stream_key, stream_ctime, stream_isplaying
+            "SELECT stream_type, stream_key, stream_ctime, stream_isplaying,
+                    last_ctime, last_isplaying
             FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
         $statement->execute(['roomcode' => $roomcode]);
         $result = $statement->fetch();
@@ -36,7 +37,9 @@ if($mode=='init_stream'){
                 'stream_type'=>$result['stream_type'],
                 'stream_key'=>$result['stream_key'],
                 'stream_ctime'=>$result['stream_ctime'],
-                'stream_isplaying'=>$result['stream_isplaying']
+                'stream_isplaying'=>$result['stream_isplaying'],
+                'last_ctime'=>$result['last_ctime'],
+                'last_isplaying'=>$result['last_isplaying']
             );
             $is_valid_roomcode=true;
         } // Else, room does not exists... So it's an invalid code.             
@@ -56,10 +59,10 @@ if($mode=='init_stream'){
         $statement = $db->getPDO()->prepare(
             "INSERT INTO rooms 
             (id, roomcode, time_creation, stream_type, stream_key,
-            stream_ctime, stream_isplaying)
+            stream_ctime, stream_isplaying, last_ctime, last_isplaying)
             VALUES
             (DEFAULT, :roomcode, :time_creation, :stream_type, :stream_key,
-            :stream_ctime, :stream_isplaying);"
+            :stream_ctime, :stream_isplaying, :last_ctime, :last_isplaying);"
         );
 
         $statement->execute([
@@ -68,7 +71,9 @@ if($mode=='init_stream'){
             'stream_type'=>$stream_type,
             'stream_key'=>$stream_key,
             'stream_ctime'=>0,
-            'stream_isplaying'=>0
+            'stream_isplaying'=>0,
+            'last_ctime'=>sql_datetime(6),
+            'last_isplaying'=>sql_datetime(6)
         ]);
         answer(1,array(
             'roomcode'=>$roomcode,
@@ -76,7 +81,8 @@ if($mode=='init_stream'){
             'stream_key'=>$stream_key,
             'stream_ctime'=>0,
             'stream_isplaying'=>0,
-            'last_ctime'=>sql_datetime(6)
+            'last_ctime'=>sql_datetime(6),
+            'last_isplaying'=>sql_datetime(6)
         ));
     }
 }elseif($mode=='request'){
