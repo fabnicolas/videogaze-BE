@@ -94,6 +94,14 @@ function array_equals(array $array1, array $array2){
 	return $are_equals;
 }
 
+function log_println($filename,$text){
+	return log_print($filename,$text.PHP_EOL);
+}
+
+function log_print($filename,$text){
+	return file_put_contents($filename, $text, FILE_APPEND);
+}
+
 // Enable errors
 enable_errors();
 ?>

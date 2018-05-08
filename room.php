@@ -103,8 +103,9 @@ if($mode=='init_stream'){
             }elseif($request_type=='set_isplaying'){
                 $request_value=(int)post_parameter('request_value',1);
                 if(is_numeric($request_value) && ($request_value==0 || $request_value==1)){
-                    $extra['videotime']=(float)post_parameter('request_videotime',-1);
-                    if($extra['videotime']>=0) $is_valid_request=true;
+                    $is_valid_request=true;
+                    $extra['videotime']=post_parameter('request_videotime',-1);
+                    //if($extra['videotime']>=0) $is_valid_request=true;
                 }
             }elseif($request_type=='set_time'){
                 $request_value=(int)post_parameter('request_value',-1);
@@ -133,6 +134,13 @@ if($mode=='init_stream'){
                         'request_type'=>$request_type,
                         'request_value'=>$request_value
                     ]);
+                    log_println("requests.txt",json_encode([
+                        'roomcode'=>$roomcode,
+                        'nickname'=>$user_ip,
+                        'time_creation'=>sql_datetime(),
+                        'request_type'=>$request_type,
+                        'request_value'=>$request_value
+                    ]));
                 }
                 insert_request($db,$roomcode,$user_ip,$request_type,$request_value);
                 if($request_type=='set_isplaying'){
