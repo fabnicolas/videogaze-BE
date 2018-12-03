@@ -134,13 +134,6 @@ if($mode=='init_stream'){
                         'request_type'=>$request_type,
                         'request_value'=>$request_value
                     ]);
-                    log_println("requests.txt",json_encode([
-                        'roomcode'=>$roomcode,
-                        'nickname'=>$user_ip,
-                        'time_creation'=>sql_datetime(),
-                        'request_type'=>$request_type,
-                        'request_value'=>$request_value
-                    ]));
                 }
                 insert_request($db,$roomcode,$user_ip,$request_type,$request_value);
                 if($request_type=='set_isplaying'){
