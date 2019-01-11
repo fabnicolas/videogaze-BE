@@ -1,10 +1,15 @@
 <?php
+/*
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');
+*/
 $config = require ("./config.php");
-
 include ("./include/functions.php");
+cors_allow_all();
+header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
 $db = include_once (__DIR__ . "/include/use_db.php");
 
@@ -58,10 +63,10 @@ if($mode=='init_stream'){
 
         $statement = $db->getPDO()->prepare(
             "INSERT INTO rooms 
-            (id, roomcode, time_creation, stream_type, stream_key,
+            (roomcode, time_creation, stream_type, stream_key,
             stream_ctime, stream_isplaying, last_ctime, last_isplaying)
             VALUES
-            (DEFAULT, :roomcode, :time_creation, :stream_type, :stream_key,
+            (:roomcode, :time_creation, :stream_type, :stream_key,
             :stream_ctime, :stream_isplaying, :last_ctime, :last_isplaying);"
         );
 
@@ -82,7 +87,8 @@ if($mode=='init_stream'){
             'stream_ctime'=>0,
             'stream_isplaying'=>0,
             'last_ctime'=>sql_datetime(6),
-            'last_isplaying'=>sql_datetime(6)
+            'last_isplaying'=>sql_datetime(6),
+            'extra'=>var_export($statement->errorInfo(),true)
         ));
     }
 }elseif($mode=='request'){

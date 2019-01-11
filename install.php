@@ -26,7 +26,7 @@ CREATE TABLE files_uploaded (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE requests_in_rooms (
-  id bigint(20) NOT NULL,
+  id bigint(20) NOT NULL AUTO_INCREMENT,
   roomcode varchar(22) NOT NULL,
   nickname varchar(15) NOT NULL,
   time_creation datetime NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE requests_in_rooms (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE rooms (
-  id bigint(20) NOT NULL,
+  id bigint(20) NOT NULL AUTO_INCREMENT,
   roomcode varchar(22) NOT NULL,
   time_creation datetime NOT NULL,
   stream_type varchar(20) NOT NULL DEFAULT 'uploaded_video',
