@@ -39,9 +39,15 @@ class DB{
     }
 
     function __construct($connection_params, $admin_params, $connect=true){
+        $db_selected = $connection_params['dbname'];
+        if($db_selected && $connect) unset($connection_params['dbname']);
+
         $this->connection_params=$connection_params;
         $this->admin_params=$admin_params;
-        if($connect) $this->pdo = new PDO("mysql:".($this->pdo_params_composer($this->connection_params)), $this->admin_params['username'], $this->admin_params['password']);
+        if($connect){
+            $this->pdo = new PDO("mysql:".($this->pdo_params_composer($this->connection_params)), $this->admin_params['username'], $this->admin_params['password']);
+            $this->pdo->query("USE ".$db_selected);
+        }
     }
 
     function getPDO(){return $this->pdo;}

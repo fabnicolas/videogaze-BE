@@ -87,8 +87,7 @@ if($mode=='init_stream'){
             'stream_ctime'=>0,
             'stream_isplaying'=>0,
             'last_ctime'=>sql_datetime(6),
-            'last_isplaying'=>sql_datetime(6),
-            'extra'=>var_export($statement->errorInfo(),true)
+            'last_isplaying'=>sql_datetime(6)
         ));
     }
 }elseif($mode=='request'){
