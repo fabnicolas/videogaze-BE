@@ -8,6 +8,8 @@ $config = require("./config.php");
 include("./include/functions.php");
 include("./lib/uploader.class.php");
 
+$table_prefix = $config['table_prefix'];
+
 $uploader = new Uploader("./tmp/");
 
 $chunk_file = $_FILES['chunk_file'];
@@ -21,7 +23,7 @@ if($key!=null && $chunk_number!=null && $max_chunks!=null){
     if(($file_url=($uploader->uploadFile($chunk_file,$chunk_complete_filename)))!=false){
         $db = include_once(__DIR__."/include/use_db.php");
         $statement = $db->getPDO()->prepare(
-			"INSERT INTO chunks (key_filename, chunk_id, total_chunks, lifespan) 
+			"INSERT INTO ".$table_prefix."chunks (key_filename, chunk_id, total_chunks, lifespan) 
              VALUES (:key_filename, :chunk_id, :total_chunks, :lifespan)");
         $params=array();
         $params['key_filename']=$key;

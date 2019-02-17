@@ -3,6 +3,8 @@ session_start();
 $config = require_once('./config.php');
 $db = require_once('./include/use_db.php');
 
+$table_prefix = $config['table_prefix'];
+
 include_once('./lib/google_oauth2/Google_Client.php');
 include_once('./lib/google_oauth2/contrib/Google_Oauth2Service.php');
 
@@ -36,14 +38,14 @@ if($google_client->getAccessToken()){
 	$email = $gpUserProfile['email'] ?? '';
 	$locale = $gpUserProfile['locale'] ?? 'en';
 
-	$sql = "SELECT COUNT(oauth2_id) FROM users_google_oauth2 WHERE oauth2_id='".$gpUserProfile['id']."'";
+	$sql = "SELECT COUNT(oauth2_id) FROM ".$table_prefix."users_google_oauth2 WHERE oauth2_id='".$gpUserProfile['id']."'";
 	$num_rows = $db->getPDO()->query($sql)->fetchColumn();
 	if($num_rows > 0){
-	  $db->getPDO()->query("UPDATE users_google_oauth2 SET locale='".$locale."' WHERE oauth2_id='".$oauth2_id."'");
+	  $db->getPDO()->query("UPDATE ".$table_prefix."users_google_oauth2 SET locale='".$locale."' WHERE oauth2_id='".$oauth2_id."'");
 	}else{
-		$db->getPDO()->query("INSERT INTO users (user_id, auth_type, email) VALUES (DEFAULT, 'google_oauth2', '".$email."');");
+		$db->getPDO()->query("INSERT INTO ".$table_prefix."users (user_id, auth_type, email) VALUES (DEFAULT, 'google_oauth2', '".$email."');");
 		$user_id = $db->getPDO()->lastInsertId();
-		$db->getPDO()->query("INSERT INTO users_google_oauth2 (user_id, oauth2_id, locale) VALUES ('".$user_id."', '".$oauth2_id."', '".$locale."');");
+		$db->getPDO()->query("INSERT INTO ".$table_prefix."users_google_oauth2 (user_id, oauth2_id, locale) VALUES ('".$user_id."', '".$oauth2_id."', '".$locale."');");
 	}
 	$statement = $db->getPDO()->prepare($sql);
 	$statement->execute();

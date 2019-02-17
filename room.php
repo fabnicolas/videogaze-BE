@@ -11,6 +11,8 @@ cors_allow_all();
 header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
+$table_prefix = $config['table_prefix'];
+
 $db = include_once (__DIR__ . "/include/use_db.php");
 
 function answer($status,$message){
@@ -32,7 +34,7 @@ if($mode=='init_stream'){
         $statement = $db->getPDO()->prepare(
             "SELECT stream_type, stream_key, stream_ctime, stream_isplaying,
                     last_ctime, last_isplaying
-            FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
+            FROM ".$table_prefix."rooms WHERE roomcode = :roomcode LIMIT 1;");
         $statement->execute(['roomcode' => $roomcode]);
         $result = $statement->fetch();
 
@@ -62,7 +64,7 @@ if($mode=='init_stream'){
         $stream_key = post_parameter('stream_key','sample.mp4');
 
         $statement = $db->getPDO()->prepare(
-            "INSERT INTO rooms 
+            "INSERT INTO ".$table_prefix."rooms 
             (roomcode, time_creation, stream_type, stream_key,
             stream_ctime, stream_isplaying, last_ctime, last_isplaying)
             VALUES
@@ -124,9 +126,9 @@ if($mode=='init_stream'){
             }
 
             if($is_valid_request){
-                function insert_request($db,$roomcode,$user_ip,$request_type,$request_value){
+                function insert_request($db,$table_prefix,$roomcode,$user_ip,$request_type,$request_value){
                     $statement = $db->getPDO()->prepare(
-                        "INSERT INTO requests_in_rooms 
+                        "INSERT INTO ".$table_prefix."requests_in_rooms 
                         (id, roomcode, nickname, time_creation, request_type, request_value) 
                         VALUES (DEFAULT, :roomcode, :nickname, :time_creation, :request_type, :request_value) 
                         ON DUPLICATE KEY UPDATE time_creation=:time_creation,
@@ -140,9 +142,9 @@ if($mode=='init_stream'){
                         'request_value'=>$request_value
                     ]);
                 }
-                insert_request($db,$roomcode,$user_ip,$request_type,$request_value);
+                insert_request($db,$table_prefix,$roomcode,$user_ip,$request_type,$request_value);
                 if($request_type=='set_isplaying'){
-                    insert_request($db,$roomcode,$user_ip,'set_current_time',$extra['videotime']);
+                    insert_request($db,$table_prefix,$roomcode,$user_ip,'set_current_time',$extra['videotime']);
                 }
 
 
@@ -154,14 +156,14 @@ if($mode=='init_stream'){
                 */
                 $statement = $db->getPDO()->prepare(
                     "SELECT x.request_type, x.request_value
-                    FROM requests_in_rooms AS x
+                    FROM ".$table_prefix."requests_in_rooms AS x
                     INNER JOIN
                     (
-                      SELECT id FROM requests_in_rooms WHERE time_creation IN 
+                      SELECT id FROM ".$table_prefix."requests_in_rooms WHERE time_creation IN 
                       (
                           SELECT MAX(time_creation)
                     
-                          FROM requests_in_rooms AS z
+                          FROM ".$table_prefix."requests_in_rooms AS z
                     
                           WHERE request_type IN ('set_stream', 'set_isplaying', 'set_current_time')
                           AND roomcode = :roomcode 
@@ -195,7 +197,7 @@ if($mode=='init_stream'){
 
                 if(!empty($statement_params)){
                     $statement = $db->getPDO()->prepare(
-                        "UPDATE rooms SET ".$db->update_preparedstatement_composer($statement_params).
+                        "UPDATE ".$table_prefix."rooms SET ".$db->update_preparedstatement_composer($statement_params).
                         " WHERE roomcode = :roomcode"
                     );
                     $statement_params['roomcode']=$roomcode;
@@ -216,7 +218,7 @@ if($mode=='init_stream'){
         if($config['http_sync_mode']=='short_polling'){
             $statement = $db->getPDO()->prepare(
                 "SELECT stream_type, stream_key, stream_ctime, stream_isplaying
-                FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
+                FROM ".$table_prefix."rooms WHERE roomcode = :roomcode LIMIT 1;");
             $statement->execute(['roomcode' => $roomcode]);
             $result = $statement->fetch();
 
@@ -234,10 +236,10 @@ if($mode=='init_stream'){
             require_once(__DIR__.'/lib/sse.class.php');
 
             $last_sent_message=null;
-            (new SSE_Manager())->start(function() use($db,$roomcode,&$last_sent_message){
+            (new SSE_Manager())->start(function() use($db,$table_prefix,$roomcode,&$last_sent_message){
                 $statement = $db->getPDO()->prepare(
                     "SELECT stream_type, stream_key, stream_ctime, stream_isplaying, last_ctime, last_isplaying
-                    FROM rooms WHERE roomcode = :roomcode LIMIT 1;");
+                    FROM ".$table_prefix."rooms WHERE roomcode = :roomcode LIMIT 1;");
                 $statement->execute(['roomcode' => $roomcode]);
                 $result = $statement->fetch();
 
