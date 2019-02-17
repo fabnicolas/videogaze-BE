@@ -180,6 +180,8 @@ if($mode=='init_stream'){
                     $last_requests[$record['request_type']]=$record['request_value'];
                 }
 
+                $sql_time_now = sql_datetime(6);
+
                 $statement_params=array();
                 if(isset($last_requests['set_stream'])){
                     $stream_data=explode(";key=",$last_requests['set_stream']);
@@ -188,11 +190,11 @@ if($mode=='init_stream'){
                 }
                 if(isset($last_requests['set_current_time'])){
                     $statement_params['stream_ctime']=$last_requests['set_current_time'];
-                    $statement_params['last_ctime']=sql_datetime(6);
+                    $statement_params['last_ctime']=$sql_time_now;
                 }
                 if(isset($last_requests['set_isplaying'])){
                     $statement_params['stream_isplaying']=$last_requests['set_isplaying'];
-                    $statement_params['last_isplaying']=sql_datetime(6);
+                    $statement_params['last_isplaying']=$sql_time_now;
                 }
 
                 if(!empty($statement_params)){
@@ -204,7 +206,10 @@ if($mode=='init_stream'){
                     $statement->execute($statement_params);
                 }
 
-                answer(1,"OK");
+                answer(1,array(
+                    'message'=>'OK',
+                    'last_ctime'=>$sql_time_now
+                ));
             }else{answer(0,'INVALID_REQUEST');}
         }else{answer(0,'INVALID_IP');}
     }else{answer(0,'INVALID_ROOMCODE');}
