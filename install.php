@@ -46,7 +46,7 @@ CREATE TABLE ".$table_prefix."rooms (
   roomcode varchar(22) NOT NULL,
   time_creation datetime NOT NULL,
   stream_type varchar(20) NOT NULL DEFAULT 'uploaded_video',
-  stream_key varchar(200) NOT NULL,
+  stream_key varchar(500) NOT NULL,
   stream_ctime decimal(10,6) NOT NULL DEFAULT '0.000000',
   stream_isplaying tinyint(1) NOT NULL DEFAULT '0',
   last_ctime datetime(6) NOT NULL,
