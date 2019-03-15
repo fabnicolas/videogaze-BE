@@ -2,6 +2,8 @@
 /*
   THIS SCRIPT WILL SELF-DESTRUCT AFTER EXECUTION!
 */
+$del_file = false;
+
 $config = require(__DIR__."/config.php");
 $db = include_once(__DIR__."/include/use_db.php");
 $db_name = $config['db_name'];
@@ -38,7 +40,7 @@ CREATE TABLE ".$table_prefix."requests_in_rooms (
   nickname varchar(15) NOT NULL,
   time_creation datetime NOT NULL,
   request_type varchar(20) NOT NULL,
-  request_value varchar(50) NOT NULL,
+  request_value varchar(500) NOT NULL,
   PRIMARY KEY (id,roomcode,nickname,request_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 CREATE TABLE ".$table_prefix."rooms (
@@ -58,6 +60,8 @@ ALTER TABLE ".$table_prefix."chunks
 ALTER TABLE ".$table_prefix."files_uploaded
   ADD PRIMARY KEY (id,code);
 ");
-class SelfDestroy{function __destruct(){unlink(__FILE__);}}
-$installation_finished = new SelfDestroy();
+if($del_file){
+  class SelfDestroy{function __destruct(){unlink(__FILE__);}}
+  $installation_finished = new SelfDestroy();
+}
 ?>

@@ -1,15 +1,7 @@
 <?php
-/*
-
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');
-*/
 $config = require ("./config.php");
 include ("./include/functions.php");
 cors_allow_all();
-header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
-header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
 $table_prefix = $config['table_prefix'];
 
